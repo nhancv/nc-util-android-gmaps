@@ -2,25 +2,32 @@ package com.nhancv.gmaps;
 
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
+import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.maps.android.clustering.Cluster;
+import com.google.maps.android.clustering.ClusterItem;
 import com.google.maps.android.clustering.ClusterManager;
 import com.google.maps.android.geojson.GeoJsonLayer;
 import com.nhancv.gmaps.cluster.MyItem;
+import com.nhancv.gmaps.cluster.MyRenderer;
 
 import org.json.JSONException;
 
 import java.io.IOException;
+import java.util.Random;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, ClusterManager.OnClusterClickListener<MyItem>, ClusterManager.OnClusterInfoWindowClickListener<MyItem>, ClusterManager.OnClusterItemClickListener<MyItem>, ClusterManager.OnClusterItemInfoWindowClickListener<MyItem> {
 
     private GoogleMap map;
     private ClusterManager<MyItem> clusterManager;
+    private Random random = new Random(1984);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,7 +68,20 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
 
         //@nhancv TODO: Setup Cluster
-        setUpCluster();
+        getMap().moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(51.503186, -0.126446), 9.5f));
+
+        clusterManager = new ClusterManager<>(this, getMap());
+        clusterManager.setRenderer(new MyRenderer(getApplicationContext(), getMap(), clusterManager));
+        getMap().setOnCameraIdleListener(clusterManager);
+        getMap().setOnMarkerClickListener(clusterManager);
+        getMap().setOnInfoWindowClickListener(clusterManager);
+        clusterManager.setOnClusterClickListener(this);
+        clusterManager.setOnClusterInfoWindowClickListener(this);
+        clusterManager.setOnClusterItemClickListener(this);
+        clusterManager.setOnClusterItemInfoWindowClickListener(this);
+
+        addItems();
+        clusterManager.cluster();
 
 
     }
@@ -74,36 +94,82 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         this.map = map;
     }
 
-    private void setUpCluster() {
-        // Position the map.
-        getMap().moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(51.503186, -0.126446), 10));
+    private void addItems() {
+        // http://www.flickr.com/photos/sdasmarchives/5036248203/
+        clusterManager.addItem(new MyItem(position(), "Walter", R.drawable.walter));
 
-        // Initialize the manager with the context and the map.
-        // (Activity extends context, so we can pass 'this' in the constructor.)
-        clusterManager = new ClusterManager<>(this, getMap());
+        // http://www.flickr.com/photos/usnationalarchives/4726917149/
+        clusterManager.addItem(new MyItem(position(), "Gran", R.drawable.gran));
 
-        // Point the map's listeners at the listeners implemented by the cluster
-        // manager.
-        getMap().setOnCameraIdleListener(clusterManager);
-        getMap().setOnMarkerClickListener(clusterManager);
+        // http://www.flickr.com/photos/nypl/3111525394/
+        clusterManager.addItem(new MyItem(position(), "Ruth", R.drawable.ruth));
 
-        // Add cluster items (markers) to the cluster manager.
-        addItems();
+        // http://www.flickr.com/photos/smithsonian/2887433330/
+        clusterManager.addItem(new MyItem(position(), "Stefan", R.drawable.stefan));
+
+        // http://www.flickr.com/photos/library_of_congress/2179915182/
+        clusterManager.addItem(new MyItem(position(), "Mechanic", R.drawable.mechanic));
+
+        // http://www.flickr.com/photos/nationalmediamuseum/7893552556/
+        clusterManager.addItem(new MyItem(position(), "Yeats", R.drawable.yeats));
+
+        // http://www.flickr.com/photos/sdasmarchives/5036231225/
+        clusterManager.addItem(new MyItem(position(), "John", R.drawable.john));
+
+        // http://www.flickr.com/photos/anmm_thecommons/7694202096/
+        clusterManager.addItem(new MyItem(position(), "Trevor the Turtle", R.drawable.turtle));
+
+        // http://www.flickr.com/photos/usnationalarchives/4726892651/
+        clusterManager.addItem(new MyItem(position(), "Teach", R.drawable.teacher));
     }
 
-    private void addItems() {
+    private LatLng position() {
+        return new LatLng(random(51.6723432, 51.38494009999999), random(0.148271, -0.3514683));
+    }
 
-        // Set some lat/lng coordinates to start with.
-        double lat = 51.5145160;
-        double lng = -0.1270060;
+    private double random(double min, double max) {
+        return random.nextDouble() * (max - min) + min;
+    }
 
-        // Add ten cluster items in close proximity, for purposes of this example.
-        for (int i = 0; i < 10; i++) {
-            double offset = i / 60d;
-            lat = lat + offset;
-            lng = lng + offset;
-            MyItem offsetItem = new MyItem(lat, lng);
-            clusterManager.addItem(offsetItem);
+    @Override
+    public boolean onClusterClick(Cluster<MyItem> cluster) {
+        // Show a toast with some info when the cluster is clicked.
+        String firstName = cluster.getItems().iterator().next().name;
+        Toast.makeText(this, cluster.getSize() + " (including " + firstName + ")", Toast.LENGTH_SHORT).show();
+
+        // Zoom in the cluster. Need to create LatLngBounds and including all the cluster items
+        // inside of bounds, then animate to center of the bounds.
+
+        // Create the builder to collect all essential cluster items for the bounds.
+        LatLngBounds.Builder builder = LatLngBounds.builder();
+        for (ClusterItem item : cluster.getItems()) {
+            builder.include(item.getPosition());
         }
+        // Get the LatLngBounds
+        final LatLngBounds bounds = builder.build();
+
+        // Animate camera to the bounds
+        try {
+            getMap().animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, 100));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return true;
+    }
+
+    @Override
+    public void onClusterInfoWindowClick(Cluster<MyItem> cluster) {
+
+    }
+
+    @Override
+    public boolean onClusterItemClick(MyItem myItem) {
+        return false;
+    }
+
+    @Override
+    public void onClusterItemInfoWindowClick(MyItem myItem) {
+
     }
 }

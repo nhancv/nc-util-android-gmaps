@@ -9,14 +9,26 @@ import com.google.maps.android.clustering.ClusterItem;
 
 public class MyItem implements ClusterItem {
 
-    private final LatLng position;
+    public final String name;
+    public final int profilePhoto;
+    private final LatLng mPosition;
 
-    public MyItem(double lat, double lng) {
-        position = new LatLng(lat, lng);
+    public MyItem(LatLng position, String name, int pictureResource) {
+        this.name = name;
+        profilePhoto = pictureResource;
+        mPosition = position;
     }
 
     @Override
     public LatLng getPosition() {
-        return position;
+        return mPosition;
+    }
+
+    public String getTitle() {
+        return null;
+    }
+
+    public String getSnippet() {
+        return null;
     }
 }
