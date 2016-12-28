@@ -2,6 +2,7 @@ package com.nhancv.gmaps;
 
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
+import android.util.Log;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -23,7 +24,14 @@ import org.json.JSONException;
 import java.io.IOException;
 import java.util.Random;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, ClusterManager.OnClusterClickListener<MyItem>, ClusterManager.OnClusterInfoWindowClickListener<MyItem>, ClusterManager.OnClusterItemClickListener<MyItem>, ClusterManager.OnClusterItemInfoWindowClickListener<MyItem> {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback,
+        GoogleMap.OnCameraIdleListener,
+        ClusterManager.OnClusterClickListener<MyItem>,
+        ClusterManager.OnClusterInfoWindowClickListener<MyItem>,
+        ClusterManager.OnClusterItemClickListener<MyItem>,
+        ClusterManager.OnClusterItemInfoWindowClickListener<MyItem> {
+
+    private static final String TAG = MapsActivity.class.getSimpleName();
 
     private GoogleMap map;
     private ClusterManager<MyItem> clusterManager;
@@ -71,8 +79,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         getMap().moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(51.503186, -0.126446), 9.5f));
 
         clusterManager = new ClusterManager<>(this, getMap());
+
         clusterManager.setRenderer(new MyRenderer(getApplicationContext(), getMap(), clusterManager));
-        getMap().setOnCameraIdleListener(clusterManager);
+        getMap().setOnCameraIdleListener(this);
         getMap().setOnMarkerClickListener(clusterManager);
         getMap().setOnInfoWindowClickListener(clusterManager);
         clusterManager.setOnClusterClickListener(this);
@@ -82,8 +91,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         addItems();
         clusterManager.cluster();
-
-
     }
 
     public GoogleMap getMap() {
@@ -171,5 +178,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onClusterItemInfoWindowClick(MyItem myItem) {
 
+    }
+
+    @Override
+    public void onCameraIdle() {
+        String zoomInfo = String.format("onMapReady:zoom: %s, minZoom: %s, maxZoom: %s",
+                getMap().getCameraPosition().zoom,
+                getMap().getMinZoomLevel(),
+                getMap().getMaxZoomLevel());
+        Log.d(TAG, zoomInfo);
+        clusterManager.onCameraIdle();
     }
 }
