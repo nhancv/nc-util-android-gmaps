@@ -208,7 +208,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         //@nhancv TODO: add circle animation
         final float density = getResources().getDisplayMetrics().density;
-        final float radius = 1500 * density;
+        final float radius = 200 * density * (getMap().getMaxZoomLevel() - getMap().getCameraPosition().zoom);
         final Circle circle = getMap().addCircle(new CircleOptions().center(bounds.getCenter())
                 .strokeColor(Color.CYAN).radius(radius).strokeWidth(1f));
 
