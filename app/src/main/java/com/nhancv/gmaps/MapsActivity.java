@@ -1,8 +1,12 @@
 package com.nhancv.gmaps;
 
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.SystemClock;
 import android.support.v4.app.FragmentActivity;
 import android.util.Log;
+import android.view.animation.AccelerateInterpolator;
+import android.view.animation.Interpolator;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -11,6 +15,7 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.maps.android.clustering.Cluster;
 import com.google.maps.android.clustering.ClusterItem;
@@ -22,6 +27,8 @@ import com.nhancv.gmaps.cluster.MyRenderer;
 import org.json.JSONException;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback,
@@ -37,6 +44,33 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private ClusterManager<MyItem> clusterManager;
     private Random random = new Random(1984);
 
+    public void rotateMarker(final Marker marker, final float toRotation) {
+        final Handler handler = new Handler();
+        final long start = SystemClock.uptimeMillis();
+        final float startRotation = marker.getRotation();
+        final long duration = 1555;
+
+        final Interpolator interpolator = new AccelerateInterpolator();
+
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                long elapsed = SystemClock.uptimeMillis() - start;
+                float t = interpolator.getInterpolation((float) elapsed / duration);
+                float rot = t * toRotation + (1 - t) * startRotation;
+
+                marker.setRotation(rot);
+                if (t < 1.0) {
+                    // Post again 16ms later.
+                    handler.postDelayed(this, 16);
+                } else {
+                    // loop
+                    rotateMarker(marker, toRotation * (-1));
+                }
+            }
+        });
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -46,7 +80,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
     }
-
 
     /**
      * Manipulates the map once available.
@@ -66,6 +99,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         getMap().addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
         getMap().moveCamera(CameraUpdateFactory.newLatLng(sydney));
 
+
         //@nhancv TODO: Import example data
         try {
             GeoJsonLayer layer = new GeoJsonLayer(getMap(), R.raw.earthquake,
@@ -77,10 +111,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         //@nhancv TODO: Setup Cluster
         getMap().moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(51.503186, -0.126446), 9.5f));
-
         clusterManager = new ClusterManager<>(this, getMap());
 
-        clusterManager.setRenderer(new MyRenderer(getApplicationContext(), getMap(), clusterManager));
+        MyRenderer myRenderer = new MyRenderer(getApplicationContext(), getMap(), clusterManager);
+        clusterManager.setRenderer(myRenderer);
         getMap().setOnCameraIdleListener(this);
         getMap().setOnMarkerClickListener(clusterManager);
         getMap().setOnInfoWindowClickListener(clusterManager);
@@ -90,7 +124,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         clusterManager.setOnClusterItemInfoWindowClickListener(this);
 
         addItems();
-        clusterManager.cluster();
     }
 
     public GoogleMap getMap() {
@@ -102,32 +135,33 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void addItems() {
-        // http://www.flickr.com/photos/sdasmarchives/5036248203/
-        clusterManager.addItem(new MyItem(position(), "Walter", R.drawable.walter));
 
-        // http://www.flickr.com/photos/usnationalarchives/4726917149/
-        clusterManager.addItem(new MyItem(position(), "Gran", R.drawable.gran));
+        final List<MyItem> myItemsCollection = new ArrayList<MyItem>() {
+            {
+                add(new MyItem(position(), "Walter", R.drawable.walter));
+                add(new MyItem(position(), "Gran", R.drawable.gran));
+                add(new MyItem(position(), "Ruth", R.drawable.ruth));
+                add(new MyItem(position(), "Stefan", R.drawable.stefan));
+                add(new MyItem(position(), "Mechanic", R.drawable.mechanic));
+                add(new MyItem(position(), "Yeats", R.drawable.yeats));
+                add(new MyItem(position(), "John", R.drawable.john));
+                add(new MyItem(position(), "Trevor the Turtle", R.drawable.turtle));
+                add(new MyItem(position(), "Teach", R.drawable.teacher));
+            }
+        };
 
-        // http://www.flickr.com/photos/nypl/3111525394/
-        clusterManager.addItem(new MyItem(position(), "Ruth", R.drawable.ruth));
+        clusterManager.addItems(myItemsCollection);
+        clusterManager.cluster();
 
-        // http://www.flickr.com/photos/smithsonian/2887433330/
-        clusterManager.addItem(new MyItem(position(), "Stefan", R.drawable.stefan));
-
-        // http://www.flickr.com/photos/library_of_congress/2179915182/
-        clusterManager.addItem(new MyItem(position(), "Mechanic", R.drawable.mechanic));
-
-        // http://www.flickr.com/photos/nationalmediamuseum/7893552556/
-        clusterManager.addItem(new MyItem(position(), "Yeats", R.drawable.yeats));
-
-        // http://www.flickr.com/photos/sdasmarchives/5036231225/
-        clusterManager.addItem(new MyItem(position(), "John", R.drawable.john));
-
-        // http://www.flickr.com/photos/anmm_thecommons/7694202096/
-        clusterManager.addItem(new MyItem(position(), "Trevor the Turtle", R.drawable.turtle));
-
-        // http://www.flickr.com/photos/usnationalarchives/4726892651/
-        clusterManager.addItem(new MyItem(position(), "Teach", R.drawable.teacher));
+        new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                for (Marker marker : clusterManager.getClusterMarkerCollection().getMarkers()) {
+                    rotateMarker(marker, -25f);
+                    break;
+                }
+            }
+        }, 1000);
     }
 
     private LatLng position() {
@@ -189,4 +223,5 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         Log.d(TAG, zoomInfo);
         clusterManager.onCameraIdle();
     }
+
 }
