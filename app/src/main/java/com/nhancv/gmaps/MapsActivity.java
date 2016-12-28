@@ -9,7 +9,9 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.maps.android.clustering.ClusterManager;
 import com.google.maps.android.geojson.GeoJsonLayer;
+import com.nhancv.gmaps.cluster.MyItem;
 
 import org.json.JSONException;
 
@@ -18,6 +20,7 @@ import java.io.IOException;
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private GoogleMap map;
+    private ClusterManager<MyItem> clusterManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,21 +44,66 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
      */
     @Override
     public void onMapReady(GoogleMap googleMap) {
-        map = googleMap;
+        setMap(googleMap);
 
-        // Add a marker in Sydney and move the camera
+        //@nhancv TODO: Add a marker in Sydney and move the camera
         LatLng sydney = new LatLng(-34, 151);
-        map.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
-        map.moveCamera(CameraUpdateFactory.newLatLng(sydney));
+        getMap().addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
+        getMap().moveCamera(CameraUpdateFactory.newLatLng(sydney));
 
+        //@nhancv TODO: Import example data
         try {
-            GeoJsonLayer layer = new GeoJsonLayer(map, R.raw.earthquake,
+            GeoJsonLayer layer = new GeoJsonLayer(getMap(), R.raw.earthquake,
                     getApplicationContext());
             layer.addLayerToMap();
         } catch (IOException | JSONException e) {
             e.printStackTrace();
         }
 
+        //@nhancv TODO: Setup Cluster
+        setUpCluster();
 
+
+    }
+
+    public GoogleMap getMap() {
+        return map;
+    }
+
+    public void setMap(GoogleMap map) {
+        this.map = map;
+    }
+
+    private void setUpCluster() {
+        // Position the map.
+        getMap().moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(51.503186, -0.126446), 10));
+
+        // Initialize the manager with the context and the map.
+        // (Activity extends context, so we can pass 'this' in the constructor.)
+        clusterManager = new ClusterManager<>(this, getMap());
+
+        // Point the map's listeners at the listeners implemented by the cluster
+        // manager.
+        getMap().setOnCameraIdleListener(clusterManager);
+        getMap().setOnMarkerClickListener(clusterManager);
+
+        // Add cluster items (markers) to the cluster manager.
+        addItems();
+    }
+
+    private void addItems() {
+
+        // Set some lat/lng coordinates to start with.
+        double lat = 51.5145160;
+        double lng = -0.1270060;
+
+        // Add ten cluster items in close proximity, for purposes of this example.
+        for (int i = 0; i < 10; i++) {
+            double offset = i / 60d;
+            lat = lat + offset;
+            lng = lng + offset;
+            MyItem offsetItem = new MyItem(lat, lng);
+            clusterManager.addItem(offsetItem);
+        }
     }
 }
