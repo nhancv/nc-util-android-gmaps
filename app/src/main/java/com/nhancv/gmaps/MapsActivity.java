@@ -1,10 +1,14 @@
 package com.nhancv.gmaps;
 
+import android.animation.FloatEvaluator;
+import android.animation.ValueAnimator;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.SystemClock;
 import android.support.v4.app.FragmentActivity;
 import android.util.Log;
+import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.AccelerateInterpolator;
 import android.view.animation.Interpolator;
 import android.widget.Toast;
@@ -13,6 +17,8 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.Circle;
+import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
@@ -75,6 +81,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
+
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
@@ -124,6 +131,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         clusterManager.setOnClusterItemInfoWindowClickListener(this);
 
         addItems();
+
+//        PulsatorLayout pulsator = (PulsatorLayout) findViewById(R.id.pulsator);
+//        pulsator.start();
     }
 
     public GoogleMap getMap() {
@@ -195,6 +205,28 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         } catch (Exception e) {
             e.printStackTrace();
         }
+
+        //@nhancv TODO: add circle animation
+        final float density = getResources().getDisplayMetrics().density;
+        final float radius = 1500 * density;
+        final Circle circle = getMap().addCircle(new CircleOptions().center(bounds.getCenter())
+                .strokeColor(Color.CYAN).radius(radius).strokeWidth(1f));
+
+        ValueAnimator vAnimator = new ValueAnimator();
+        vAnimator.setRepeatCount(ValueAnimator.INFINITE);
+        vAnimator.setRepeatMode(ValueAnimator.RESTART);  /* PULSE */
+        vAnimator.setFloatValues(0, radius);
+        vAnimator.setDuration(2000);
+        vAnimator.setEvaluator(new FloatEvaluator());
+        vAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
+        vAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator valueAnimator) {
+                float animatedFraction = valueAnimator.getAnimatedFraction();
+                circle.setRadius(animatedFraction * radius);
+            }
+        });
+        vAnimator.start();
 
         return true;
     }
