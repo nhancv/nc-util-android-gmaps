@@ -44,6 +44,7 @@ public class MyRenderer extends DefaultClusterRenderer<MyItem> {
         if (inflater != null) {
             View multiProfile = inflater.inflate(R.layout.multi_profile, null);
             clusterIconGenerator.setContentView(multiProfile);
+
             clusterImageView = (ImageView) multiProfile.findViewById(R.id.image);
 
             imageView = new ImageView(context);
@@ -52,6 +53,11 @@ public class MyRenderer extends DefaultClusterRenderer<MyItem> {
             int padding = (int) context.getResources().getDimension(R.dimen.custom_profile_padding);
             imageView.setPadding(padding, padding, padding, padding);
             iconGenerator.setContentView(imageView);
+
+            //@nhancv TODO: turn off background default of marker
+            iconGenerator.setBackground(null);
+            clusterIconGenerator.setBackground(null);
+
         }
     }
 
